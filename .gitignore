@@ -1,0 +1,25 @@
+
+
+# Entorno virtual
+qds/
+venv/
+
+# Archivos cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Streamlit config/cache
+.streamlit/
+*.log
+
+# Archivos temporales de sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de entorno
+.env
+*.env
+
+# VS Code settings (opcional)
+.vscode/
