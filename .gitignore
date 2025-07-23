@@ -23,3 +23,6 @@ Thumbs.db
 
 # VS Code settings (opcional)
 .vscode/
+
+#ignore claves
+claves/
