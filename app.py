@@ -1,5 +1,8 @@
 import streamlit as st
-from snowflake_conn import cargar_clave_privada, conectar_snowflake, PRIVATE_KEY_PATH, USUARIO, CUENTA, ROL
+#from snowflake_conn import cargar_clave_privada, conectar_snowflake, PRIVATE_KEY_PATH, USUARIO, CUENTA, ROL
+from snowflake_conn import cargar_clave_privada_desde_secrets, conectar_snowflake, USUARIO, CUENTA, ROL
+clave_privada = cargar_clave_privada_desde_secrets()
+
 import pandas as pd
 
 import altair as alt
@@ -8,7 +11,8 @@ st.title("🔗 Dashboard Fortisoft")
 
 try:
     st.info("Conectando a Snowflake...")
-    clave_privada = cargar_clave_privada(PRIVATE_KEY_PATH)
+    #clave_privada = cargar_clave_privada(PRIVATE_KEY_PATH)
+    clave_privada = cargar_clave_privada_desde_secrets()
     conexion = conectar_snowflake(USUARIO, CUENTA, clave_privada, ROL)
     cursor = conexion.cursor()
 
