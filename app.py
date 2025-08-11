@@ -21,6 +21,27 @@ try:
 
     st.success("✅ Conectado correctamente.")
 
+
+    if "ID" in df.columns:
+        resumen_ids = (
+            df.groupby("ID")
+            .agg(
+                inicio=("TIMESTAMP", "min"),
+                fin=("TIMESTAMP", "max"),
+                total_registros=("TABLE_NAME", "count"),
+                base_datos=("DATABASE_NAME", "first"),
+                esquema=("SCHEMA_NAME", "first"),
+                tabla=("TABLE_NAME", "first")
+            )
+            .reset_index()
+            .sort_values(by="fin", ascending=False)
+        )
+
+        st.subheader("📅 Resumen de ejecuciones por ID")
+        st.dataframe(resumen_ids)
+    else:
+        st.warning("No se encontró la columna 'ID' en los datos.")
+
     # Filtros en la barra lateral
     st.sidebar.header("🔍 Filtros")
     dbs = st.sidebar.multiselect("Base de datos", df['DATABASE_NAME'].unique())
