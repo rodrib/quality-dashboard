@@ -81,6 +81,23 @@ try:
 
                 st.subheader("📋 Resumen por tipo de validación")
                 st.dataframe(resumen)
+
+
+                st.subheader("📊 Gráfico de validaciones por tipo y estado")
+
+                chart = alt.Chart(resumen).mark_bar().encode(
+                x=alt.X('VALIDATION_NAME:N', title='Tipo de validación', sort='-y'),
+                y=alt.Y('Cantidad:Q', title='Cantidad'),
+                color=alt.Color('estado:N', scale=alt.Scale(domain=['OK', 'Fallida'], range=['green', 'red'])),
+                tooltip=['VALIDATION_NAME', 'estado', 'Cantidad']
+                    ).properties(
+                    width=700,
+                    height=400
+                )
+
+                st.altair_chart(chart, use_container_width=True)
+
+
             else:
                 st.info("No hay datos para este ID.")
 
