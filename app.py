@@ -50,6 +50,42 @@ try:
         st.subheader(f"🔍 Detalle de validaciones para ID: {id_seleccionado}")
         st.dataframe(detalle_id)
 
+        if id_seleccionado:
+            detalle_id = df[df["ID"] == id_seleccionado].copy()
+            detalle_id = detalle_id.sort_values(by="TIMESTAMP")
+
+            st.subheader(f"🔍 Detalle de validaciones para ID: {id_seleccionado}")
+            st.dataframe(detalle_id)
+
+            # Estadísticas básicas
+            total = len(detalle_id)
+            if total > 0:
+            # Contar validaciones exitosas según VALIDATION_RESULT
+                exitosas = detalle_id['VALIDATION_RESULT'].apply(lambda x: str(x).lower() in ['1', 'true', 'ok']).sum()
+                fallidas = total - exitosas
+                pct_exito = exitosas / total * 100
+
+                st.subheader("📊 Estadísticas para ID seleccionado")
+                col1, col2, col3 = st.columns(3)
+                col1.metric("✅ Validaciones exitosas", f"{exitosas}")
+                col2.metric("❌ Validaciones fallidas", f"{fallidas}")
+                col3.metric("📈 Porcentaje de éxito", f"{pct_exito:.1f}%")
+
+                # Resumen por tipo de validación
+                resumen = (
+                    detalle_id.groupby(['VALIDATION_NAME', 'VALIDATION_RESULT'])
+                    .size()
+                    .reset_index(name='Cantidad')
+                    )
+                resumen['estado'] = resumen['VALIDATION_RESULT'].apply(lambda x: 'OK' if str(x).lower() in ['1', 'true', 'ok'] else 'Fallida')
+
+                st.subheader("📋 Resumen por tipo de validación")
+                st.dataframe(resumen)
+            else:
+                st.info("No hay datos para este ID.")
+
+
+
     else:
         st.warning("No se encontró la columna 'ID' en los datos.")
 
