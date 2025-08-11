@@ -55,7 +55,7 @@ try:
             detalle_id = detalle_id.sort_values(by="TIMESTAMP")
 
             st.subheader(f"🔍 Detalle de validaciones para ID: {id_seleccionado}")
-            st.dataframe(detalle_id)
+            #st.dataframe(detalle_id)
 
             # Estadísticas básicas
             total = len(detalle_id)
