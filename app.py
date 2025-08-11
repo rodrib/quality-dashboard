@@ -137,6 +137,42 @@ try:
         # Mostrar gráfico
         st.altair_chart(line_chart, use_container_width=True)
 
+
+        #Agregue 11/08/25
+        # Nuevo gráfico con Row Count encima de las barras
+        st.subheader("📈 Validaciones por tipo (con Row Count)")
+
+        # Conteo total por VALIDATION_NAME (row count)
+        total_por_validacion = df_filtrado.groupby('VALIDATION_NAME').size().reset_index(name='RowCount')
+
+        # Conteo por VALIDATION_NAME y VALIDATION_RESULT
+        resumen_tipo_rc = df_filtrado.groupby(['VALIDATION_NAME', 'VALIDATION_RESULT']).size().reset_index(name='Cantidad')
+        resumen_tipo_rc['estado'] = resumen_tipo_rc['VALIDATION_RESULT'].apply(lambda x: 'OK' if str(x).lower() in ['1', 'true', 'ok'] else 'Fallida')
+
+        # Unir para tener RowCount por VALIDATION_NAME
+        resumen_tipo_rc = resumen_tipo_rc.merge(total_por_validacion, on='VALIDATION_NAME')
+
+        base = alt.Chart(resumen_tipo_rc).encode(
+            x=alt.X('VALIDATION_NAME:N', title='Tipo de validación', sort='-y'),
+            y=alt.Y('Cantidad:Q', title='Cantidad'),
+            color=alt.Color('estado:N', scale=alt.Scale(domain=['OK', 'Fallida'], range=['green', 'red'])),
+            tooltip=['VALIDATION_NAME', 'estado', 'Cantidad', 'RowCount']
+            )
+
+        bars = base.mark_bar()
+        text = base.mark_text(
+        align='center',
+        baseline='bottom',
+        dy=-5
+            ).encode(
+            text='RowCount:Q'
+        )
+
+        chart_rc = (bars + text).properties(width=700, height=400)
+        st.altair_chart(chart_rc, use_container_width=True)
+
+
+
         # 🔍 Mostrar tabla agrupada
         with st.expander("🔍 Ver datos agrupados por fecha y estado"):
             st.dataframe(evolucion)
