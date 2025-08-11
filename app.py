@@ -39,8 +39,23 @@ try:
 
         st.subheader("📅 Resumen de ejecuciones por ID")
         st.dataframe(resumen_ids)
+
+        # 2. Selector para elegir ID
+        id_seleccionado = st.selectbox("Seleccionar ID para ver detalle", resumen_ids["ID"])
+
+        # 3. Mostrar detalle filtrado por ese ID
+        detalle_id = df[df["ID"] == id_seleccionado].copy()
+        detalle_id = detalle_id.sort_values(by="TIMESTAMP")
+
+        st.subheader(f"🔍 Detalle de validaciones para ID: {id_seleccionado}")
+        st.dataframe(detalle_id)
+
     else:
         st.warning("No se encontró la columna 'ID' en los datos.")
+
+
+
+        
 
     # Filtros en la barra lateral
     st.sidebar.header("🔍 Filtros")
