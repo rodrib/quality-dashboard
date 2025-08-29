@@ -40,6 +40,25 @@ try:
         st.subheader("📅 Resumen de ejecuciones por ID")
         st.dataframe(resumen_ids)
 
+
+        # OPCIÓN 1: Mostrar todas las tablas concatenadas (recomendado)
+        resumen_ids = (
+            df.groupby("ID")
+            .agg(
+            inicio=("TIMESTAMP", "min"),
+            fin=("TIMESTAMP", "max"),
+            total_registros=("TABLE_NAME", "count"),
+            base_datos=("DATABASE_NAME", "first"),
+            esquema=("SCHEMA_NAME", "first"),
+            tablas=("TABLE_NAME", lambda x: ", ".join(x.unique()))  # 👈 CAMBIO AQUÍ
+        )
+        .reset_index()
+        .sort_values(by="fin", ascending=False)
+        )
+
+        st.subheader("📅 Resumen de ejecuciones por ID y la ultima ejecucion")
+        st.dataframe(resumen_ids)
+
         # 2. Selector para elegir ID
         id_seleccionado = st.selectbox("Seleccionar ID para ver detalle", resumen_ids["ID"])
 
