@@ -59,7 +59,41 @@ try:
         st.subheader("📅 Resumen de ejecuciones por ID y la ultima ejecucion")
         st.dataframe(resumen_ids)
 
-        
+        ultimas_ejecuciones = (
+            df.loc[df.groupby('TABLE_NAME')['TIMESTAMP'].idxmax()]  # 👈 Toma la fila con timestamp más reciente por tabla
+            .groupby("ID")
+            .agg(
+                inicio=("TIMESTAMP", "min"),
+             fin=("TIMESTAMP", "max"),
+             total_registros=("TABLE_NAME", "count"),
+                base_datos=("DATABASE_NAME", "first"),
+                esquema=("SCHEMA_NAME", "first"),
+                tabla=("TABLE_NAME", "first")
+            )
+            .reset_index()
+            .sort_values(by="fin", ascending=False)
+        )
+
+        st.subheader("📅 Últimas ejecuciones por tabla")
+
+        st.dataframe(
+            ultimas_ejecuciones,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "ID": st.column_config.TextColumn("ID de Ejecución", width="medium"),
+                "inicio": st.column_config.DatetimeColumn("Fecha Inicio", width="medium"),
+                "fin": st.column_config.DatetimeColumn("Fecha Fin", width="medium"),
+                "total_registros": st.column_config.NumberColumn("Registros", width="small"),
+                "base_datos": st.column_config.TextColumn("Base Datos", width="small"),
+                "esquema": st.column_config.TextColumn("Esquema", width="small"),
+                "tabla": st.column_config.TextColumn("Tabla", width="medium"),
+            }
+        )
+
+        # Mostrar estadísticas
+        st.write(f"**Tablas monitoreadas:** {len(ultimas_ejecuciones)}")
+
 
 
         # 2. Selector para elegir ID
