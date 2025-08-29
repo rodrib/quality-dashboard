@@ -41,6 +41,21 @@ try:
         # st.dataframe(resumen_ids)
 
 
+        # OPCIÓN 1: Mostrar todas las tablas concatenadas (recomendado)
+        resumen_ids = (
+            df.groupby("ID")
+            .agg(
+            inicio=("TIMESTAMP", "min"),
+            fin=("TIMESTAMP", "max"),
+            total_registros=("TABLE_NAME", "count"),
+            base_datos=("DATABASE_NAME", "first"),
+            esquema=("SCHEMA_NAME", "first"),
+            tablas=("TABLE_NAME", lambda x: ", ".join(x.unique()))  # 👈 CAMBIO AQUÍ
+        )
+        .reset_index()
+        .sort_values(by="fin", ascending=False)
+        )
+
         
 
         ultimas_ejecuciones = (
