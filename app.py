@@ -59,8 +59,7 @@ try:
         st.subheader("📅 Resumen de ejecuciones por ID y la ultima ejecucion")
         st.dataframe(resumen_ids)
 
-        # OPCIÓN RÁPIDA: Usar st.table en lugar de st.dataframe
-        st.table(resumen_ids)
+        
 
 
         # 2. Selector para elegir ID
