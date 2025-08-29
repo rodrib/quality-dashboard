@@ -41,23 +41,7 @@ try:
         # st.dataframe(resumen_ids)
 
 
-        # OPCIÓN 1: Mostrar todas las tablas concatenadas (recomendado)
-        resumen_ids = (
-            df.groupby("ID")
-            .agg(
-            inicio=("TIMESTAMP", "min"),
-            fin=("TIMESTAMP", "max"),
-            total_registros=("TABLE_NAME", "count"),
-            base_datos=("DATABASE_NAME", "first"),
-            esquema=("SCHEMA_NAME", "first"),
-            tablas=("TABLE_NAME", lambda x: ", ".join(x.unique()))  # 👈 CAMBIO AQUÍ
-        )
-        .reset_index()
-        .sort_values(by="fin", ascending=False)
-        )
-
-        st.subheader("📅 Resumen de ejecuciones por ID y la ultima ejecucion")
-        st.dataframe(resumen_ids)
+        
 
         ultimas_ejecuciones = (
             df.loc[df.groupby('TABLE_NAME')['TIMESTAMP'].idxmax()]  # 👈 Toma la fila con timestamp más reciente por tabla
