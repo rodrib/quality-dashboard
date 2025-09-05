@@ -14,7 +14,7 @@ try:
     cursor = conexion.cursor()
 
     #cursor.execute("SELECT DATABASE_NAME, SCHEMA_NAME, TABLE_NAME, VALIDATION_NAME, TIMESTAMP FROM util_db.public.quality_logs")
-    cursor.execute("SELECT ID, DATABASE_NAME, SCHEMA_NAME, TABLE_NAME, VALIDATION_NAME, VALIDATION_RESULT, TIMESTAMP FROM util_db.public.quality_logs")
+    cursor.execute("SELECT ID, DATABASE_NAME, SCHEMA_NAME, TABLE_NAME, VALIDATION_NAME, VALIDATION_RESULT, VALIDATION_VALUE, TIMESTAMP FROM util_db.public.quality_logs")
 
     resultados = cursor.fetchall()
     df = pd.DataFrame(resultados, columns=[col[0] for col in cursor.description])
