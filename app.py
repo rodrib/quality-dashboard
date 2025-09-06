@@ -24,6 +24,145 @@ try:
 
     if "ID" in df.columns:
         
+        # === SECCIÓN: Gráfico de Row Count por Tabla ===
+        st.header("📈 Evolución de Row Count por Tabla")
+
+        # Filtrar datos para validation_name = 'row count'
+        df_row_count = df[df['VALIDATION_NAME'].str.lower().str.contains('row count', na=False)].copy()
+
+        if not df_row_count.empty:
+        # Convertir VALIDATION_VALUE a numérico
+            df_row_count['VALIDATION_VALUE_NUM'] = pd.to_numeric(df_row_count['VALIDATION_VALUE'], errors='coerce')
+    
+        # Crear columna combinada para base.esquema.tabla
+            df_row_count['TABLA_COMPLETA'] = (df_row_count['DATABASE_NAME'] + '.' + 
+                                      df_row_count['SCHEMA_NAME'] + '.' + 
+                                      df_row_count['TABLE_NAME'])
+
+
+        # Filtrar solo registros con valores válidos
+        df_row_count = df_row_count.dropna(subset=['VALIDATION_VALUE_NUM'])
+    
+        if not df_row_count.empty:
+            # Obtener lista única de tablas
+            tablas_disponibles = sorted(df_row_count['TABLA_COMPLETA'].unique())
+        
+            # Selector de tabla
+            tabla_seleccionada = st.selectbox(
+            "🔍 Seleccionar tabla para ver evolución de Row Count:",
+            options=tablas_disponibles,
+            key="selector_tabla_row_count"
+            )
+
+
+            if tabla_seleccionada:
+                # Filtrar datos para la tabla seleccionada
+                datos_tabla = df_row_count[df_row_count['TABLA_COMPLETA'] == tabla_seleccionada].copy()
+            
+                if not datos_tabla.empty:
+                    # Ordenar por timestamp
+                    datos_tabla = datos_tabla.sort_values('TIMESTAMP')
+                
+                    # Mostrar información básica de la tabla seleccionada
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("📊 Total registros", len(datos_tabla))
+                    with col2:
+                        ultimo_valor = datos_tabla['VALIDATION_VALUE_NUM'].iloc[-1]
+                        st.metric("📈 Último Row Count", f"{ultimo_valor:,.0f}")
+                    with col3:
+                        primer_valor = datos_tabla['VALIDATION_VALUE_NUM'].iloc[0]
+                        diferencia = ultimo_valor - primer_valor
+                        st.metric("📊 Cambio total", f"{diferencia:+,.0f}")
+                    with col4:
+                        fecha_ultimo = datos_tabla['TIMESTAMP'].iloc[-1]
+                        st.metric("📅 Última actualización", fecha_ultimo.strftime("%Y-%m-%d %H:%M"))
+                
+                    # Crear gráfico de línea con Altair
+                    chart = alt.Chart(datos_tabla).mark_line(
+                        point=True,
+                        strokeWidth=3
+                    ).encode(
+                        x=alt.X('TIMESTAMP:T', 
+                           title='Fecha/Hora',
+                           axis=alt.Axis(labelAngle=-45)),
+                        y=alt.Y('VALIDATION_VALUE_NUM:Q', 
+                           title='Row Count',
+                           scale=alt.Scale(zero=False)),
+                        tooltip=[
+                        alt.Tooltip('TIMESTAMP:T', title='Fecha/Hora'),
+                        alt.Tooltip('VALIDATION_VALUE_NUM:Q', title='Row Count', format=',.0f'),
+                        alt.Tooltip('ID:N', title='ID Ejecución')
+                        ]
+                    ).properties(
+                        width=800,
+                        height=400,
+                        title=f"Evolución de Row Count - {tabla_seleccionada}"
+                    ).interactive()
+
+                    # Mostrar el gráfico
+                    st.altair_chart(chart, use_container_width=True)
+
+                    # Tabla de detalles de la evolución
+                    st.subheader("📋 Detalle de la evolución")
+
+                    # Preparar datos para mostrar
+                    detalle_evolucion = datos_tabla[['TIMESTAMP', 'VALIDATION_VALUE_NUM', 'ID']].copy()
+                    detalle_evolucion['VALIDATION_VALUE_NUM'] = detalle_evolucion['VALIDATION_VALUE_NUM'].astype(int)
+                
+                    # Calcular cambios entre mediciones
+                    detalle_evolucion['CAMBIO'] = detalle_evolucion['VALIDATION_VALUE_NUM'].diff()
+                    detalle_evolucion['CAMBIO_PCT'] = detalle_evolucion['VALIDATION_VALUE_NUM'].pct_change() * 100
+
+
+                    # Formatear para mostrar
+                    detalle_evolucion['CAMBIO_FORMATO'] = detalle_evolucion['CAMBIO'].apply(
+                        lambda x: f"+{x:,.0f}" if pd.notna(x) and x > 0 
+                             else f"{x:,.0f}" if pd.notna(x) 
+                             else "-"
+                    )
+                    detalle_evolucion['CAMBIO_PCT_FORMATO'] = detalle_evolucion['CAMBIO_PCT'].apply(
+                    lambda x: f"+{x:.2f}%" if pd.notna(x) and x > 0 
+                             else f"{x:.2f}%" if pd.notna(x) 
+                             else "-"
+                    )
+
+                    st.dataframe(
+                        detalle_evolucion[['TIMESTAMP', 'VALIDATION_VALUE_NUM', 'CAMBIO_FORMATO', 'CAMBIO_PCT_FORMATO', 'ID']],
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "TIMESTAMP": st.column_config.DatetimeColumn("Fecha/Hora"),
+                            "VALIDATION_VALUE_NUM": st.column_config.NumberColumn("Row Count", format="%d"),
+                            "CAMBIO_FORMATO": st.column_config.TextColumn("Cambio Absoluto"),
+                            "CAMBIO_PCT_FORMATO": st.column_config.TextColumn("Cambio %"),
+                            "ID": st.column_config.TextColumn("ID Ejecución")
+                        }
+                    )
+
+                    # Mostrar estadísticas adicionales
+                    if len(datos_tabla) > 1:
+                        st.subheader("📊 Estadísticas de cambios")
+                        cambios = datos_tabla['VALIDATION_VALUE_NUM'].diff().dropna()
+                    
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("📈 Mayor incremento", f"+{cambios.max():,.0f}")
+                        with col2:
+                            st.metric("📉 Mayor decremento", f"{cambios.min():,.0f}")
+                        with col3:
+                            st.metric("📊 Promedio cambio", f"{cambios.mean():+,.1f}")
+                        with col4:
+                            cambios_positivos = (cambios > 0).sum()
+                            st.metric("✅ Incrementos", f"{cambios_positivos}/{len(cambios)}")
+                else:
+                    st.warning(f"⚠️ No hay datos de row count para la tabla: {tabla_seleccionada}")
+            else:
+                st.warning("⚠️ No se encontraron datos válidos de row count.")
+        else:
+            st.warning("⚠️ No se encontraron validaciones de 'row count' en los datos.")
+                
+                
 
 
         # OPCIÓN 1: Mostrar todas las tablas concatenadas (recomendado)
