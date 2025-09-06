@@ -23,22 +23,7 @@ try:
 
 
     if "ID" in df.columns:
-        # resumen_ids = (
-        #     df.groupby("ID")
-        #     .agg(
-        #         inicio=("TIMESTAMP", "min"),
-        #         fin=("TIMESTAMP", "max"),
-        #         total_registros=("TABLE_NAME", "count"),
-        #         base_datos=("DATABASE_NAME", "first"),
-        #         esquema=("SCHEMA_NAME", "first"),
-        #         tabla=("TABLE_NAME", "first")
-        #     )
-        #     .reset_index()
-        #     .sort_values(by="fin", ascending=False)
-        # )
-
-        # st.subheader("📅 Resumen de ejecuciones por ID")
-        # st.dataframe(resumen_ids)
+        
 
 
         # OPCIÓN 1: Mostrar todas las tablas concatenadas (recomendado)
@@ -93,74 +78,121 @@ try:
         # Mostrar estadísticas
         st.write(f"**Tablas monitoreadas:** {len(ultimas_ejecuciones)}")
 
+        # Crear el dataframe interactivo para selección
+        evento_seleccion = st.dataframe(
+            ultimas_ejecuciones,
+            key="seleccion_ejecuciones",
+            on_select="rerun",
+            selection_mode="single-row",
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "ID": st.column_config.TextColumn("ID de Ejecución", width="medium"),
+                "inicio": st.column_config.DatetimeColumn("Fecha Inicio", width="medium"),
+                "fin": st.column_config.DatetimeColumn("Fecha Fin", width="medium"),
+                "total_registros": st.column_config.NumberColumn("Registros", width="small"),
+                "base_datos": st.column_config.TextColumn("Base Datos", width="small"),
+                "esquema": st.column_config.TextColumn("Esquema", width="small"),
+                "tabla": st.column_config.TextColumn("Tabla", width="medium"),
+            }
+        )
 
-
-        # 2. Selector para elegir ID
-        id_seleccionado = st.selectbox("Seleccionar ID para ver detalle", resumen_ids["ID"])
-
-        # 3. Mostrar detalle filtrado por ese ID
-        detalle_id = df[df["ID"] == id_seleccionado].copy()
-        detalle_id = detalle_id.sort_values(by="TIMESTAMP")
-
-        st.subheader(f"🔍 Detalle de validaciones para ID: {id_seleccionado}")
-        st.dataframe(detalle_id)
-
-        if id_seleccionado:
+        # Verificar si hay una fila seleccionada
+        if evento_seleccion.selection.rows:
+            # Obtener el índice de la fila seleccionada
+            indice_seleccionado = evento_seleccion.selection.rows[0]
+    
+            # Obtener el ID correspondiente
+            id_seleccionado = ultimas_ejecuciones.iloc[indice_seleccionado]["ID"]
+    
+            st.info(f"📌 Has seleccionado la ejecución con ID: **{id_seleccionado}**")
+    
+            # Filtrar datos para el ID seleccionado
             detalle_id = df[df["ID"] == id_seleccionado].copy()
             detalle_id = detalle_id.sort_values(by="TIMESTAMP")
 
-            st.subheader(f"🔍 Detalle de validaciones para ID: {id_seleccionado}")
-            #st.dataframe(detalle_id)
-
-            # Estadísticas básicas
+            if len(detalle_id) == 0:
+                st.warning("⚠️ No hay datos para este ID.")
+            else:
+                st.subheader(f"🔍 Detalle de validaciones para ID: {id_seleccionado}")
+        
+            # Estadísticas básicas para el ID seleccionado
             total = len(detalle_id)
-            if total > 0:
-            # Contar validaciones exitosas según VALIDATION_RESULT
-                exitosas = detalle_id['VALIDATION_RESULT'].apply(lambda x: str(x).lower() in ['1', 'true', 'ok']).sum()
-                fallidas = total - exitosas
-                pct_exito = exitosas / total * 100
+            exitosas = detalle_id['VALIDATION_RESULT'].apply(lambda x: str(x).lower() in ['1', 'true', 'ok']).sum()
+            fallidas = total - exitosas
+            pct_exito = (exitosas / total * 100) if total > 0 else 0
 
-                st.subheader("📊 Estadísticas para ID seleccionado")
-                col1, col2, col3 = st.columns(3)
-                col1.metric("✅ Validaciones exitosas", f"{exitosas}")
-                col2.metric("❌ Validaciones fallidas", f"{fallidas}")
-                col3.metric("📈 Porcentaje de éxito", f"{pct_exito:.1f}%")
+            # Mostrar métricas
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("📊 Total validaciones", total)
+            with col2:
+                st.metric("✅ Validaciones exitosas", exitosas)
+            with col3:
+                st.metric("❌ Validaciones fallidas", fallidas)
+            with col4:
+                st.metric("📈 Porcentaje de éxito", f"{pct_exito:.1f}%")
 
-                # Resumen por tipo de validación
-                resumen = (
-                    detalle_id.groupby(['VALIDATION_NAME', 'VALIDATION_RESULT'])
-                    .size()
-                    .reset_index(name='Cantidad')
-                    )
-                resumen['estado'] = resumen['VALIDATION_RESULT'].apply(lambda x: 'OK' if str(x).lower() in ['1', 'true', 'ok'] else 'Fallida')
+            # Mostrar el detalle completo
+            st.subheader("📋 Detalle completo de validaciones")
+            st.dataframe(detalle_id, use_container_width=True, hide_index=True)
 
-                st.subheader("📋 Resumen por tipo de validación")
-                st.dataframe(resumen)
+            # Resumen por tipo de validación
+            resumen = (
+                detalle_id.groupby(['VALIDATION_NAME', 'VALIDATION_RESULT'])
+                .size()
+                .reset_index(name='Cantidad')
+            )
+            resumen['Estado'] = resumen['VALIDATION_RESULT'].apply(
+                lambda x: 'OK' if str(x).lower() in ['1', 'true', 'ok'] else 'Fallida'
+            )
 
+            st.subheader("📊 Resumen por tipo de validación")
+            st.dataframe(resumen[['VALIDATION_NAME', 'Estado', 'Cantidad']], 
+                    use_container_width=True, hide_index=True)
 
-                st.subheader("📊 Gráfico de validaciones por tipo y estado")
+            # Gráfico de validaciones
+            if len(resumen) > 0:
+                st.subheader("📈 Gráfico de validaciones por tipo y estado")
 
-                chart = alt.Chart(resumen).mark_bar().encode(
-                x=alt.X('VALIDATION_NAME:N', title='Tipo de validación', sort='-y'),
-                y=alt.Y('Cantidad:Q', title='Cantidad'),
-                color=alt.Color('estado:N', scale=alt.Scale(domain=['OK', 'Fallida'], range=['green', 'red'])),
-                tooltip=['VALIDATION_NAME', 'estado', 'Cantidad']
-                    ).properties(
+                grafico = alt.Chart(resumen).mark_bar().encode(
+                    x=alt.X('VALIDATION_NAME:N', title='Tipo de validación', sort='-y'),
+                    y=alt.Y('Cantidad:Q', title='Cantidad'),
+                    color=alt.Color(
+                    'Estado:N', 
+                    scale=alt.Scale(
+                        domain=['OK', 'Fallida'], 
+                        range=['#2E8B57', '#DC143C']
+                    ),
+                    legend=alt.Legend(title="Estado")
+                    ),
+                    tooltip=['VALIDATION_NAME:N', 'Estado:N', 'Cantidad:Q']
+                ).properties(
                     width=700,
-                    height=400
+                    height=400,
+                    title=f"Distribución de validaciones para ID {id_seleccionado}"
                 )
 
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(grafico, use_container_width=True)
 
 
-            else:
-                st.info("No hay datos para este ID.")
+                # Mostrar específicamente las validaciones fallidas
+                validaciones_fallidas = detalle_id[
+                    ~detalle_id['VALIDATION_RESULT'].apply(lambda x: str(x).lower() in ['1', 'true', 'ok'])
+                ]
+                if len(validaciones_fallidas) > 0:
+                    st.subheader("⚠️ Validaciones fallidas")
+                    st.dataframe(
+                    validaciones_fallidas[['TIMESTAMP', 'TABLE_NAME', 'VALIDATION_NAME', 'VALIDATION_RESULT', 'VALIDATION_VALUE']],
+                    use_container_width=True,
+                    hide_index=True
+                )
+                else:
+                    st.success("🎉 ¡Todas las validaciones fueron exitosas!")
 
-
-
-    else:
-        st.warning("No se encontró la columna 'ID' en los datos.")
-
+        
+        else:
+            st.info("👆 Haz clic en una fila de la tabla de arriba para ver los detalles de esa ejecución")
 
 
         
